@@ -831,3 +831,8 @@ button,
 .menu a {
   color: #111827;
 }
+
+.settings-button {
+  background-color: #f3f4f6 !important; /* gris clair fixe */
+  color: #111827 !important; /*texte noir*/
+}
