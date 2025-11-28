@@ -832,7 +832,19 @@ button,
   color: #111827;
 }
 
-.settings-button {
+.settings-button,
+button.settings,
+.btn-setting{
   background-color: #f3f4f6 !important; /* gris clair fixe */
   color: #111827 !important; /*texte noir*/
+  border: 1px solid #e5e7eb !important; /* bordure légère */
+}
+
+:root {
+  color-scheme: light;
+}
+
+body{
+  background-color: #ffffff !important;
+  color:#111827 !important;
 }
