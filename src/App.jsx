@@ -138,7 +138,7 @@ export default function App() {
         const [prodRes, salesRes, payRes] = await Promise.all([
           supabase
             .from("maboutique")
-            .select("id, nom, prix, stock, categorie")
+            .select("id, nom, prix, stock, categorie, image_url")
             .order("id", { ascending: true }),
           supabase.from("sales").select("*").order("date", {
             ascending: false,
@@ -227,7 +227,9 @@ export default function App() {
     const { error } = await supabase
       .from("maboutique")
       .update(row)
-      .eq("id", product.id);
+      .eq("id", product.id)
+      .select("id, nom, prix, stock, categorie, image_url")
+      .single();
     if (error) throw error;
   }
 
