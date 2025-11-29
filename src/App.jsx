@@ -24,7 +24,7 @@ function rowToProduct(row) {
     price: Number(row.prix) || 0,
     stock: Number(row.stock) || 0,
     minStock: 0,
-    imageUrl: row
+    imageUrl: typeof row.image_url === "string" ? row.image_url : null,
   };
 }
 
