@@ -1344,11 +1344,6 @@ function POSPage({ products, currency, onCheckout }) {
                </div>
              </article>
             ))}
-            {filtered.length === 0 && (
-              <div className="info-text">
-                Aucun produit ne correspond à cette recherche.
-              </div>
-            )}
           </div>
         </div>
 
