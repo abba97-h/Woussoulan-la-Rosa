@@ -24,6 +24,7 @@ function rowToProduct(row) {
     price: Number(row.prix) || 0,
     stock: Number(row.stock) || 0,
     minStock: 0,
+    imageUrl: row
   };
 }
 
@@ -1310,23 +1311,38 @@ function POSPage({ products, currency, onCheckout }) {
           <div className="grid-products">
             {filtered.map((p) => (
               <article key={p.id || p.name} className="card card-product">
-                <div className="product-image-placeholder">Image</div>
-                <h3 className="product-title">{p.name}</h3>
-                <p className="product-sub">
-                  {p.category || "—"} · Stock: {p.stock}
-                </p>
-                <div className="product-bottom">
-                  <span className="product-price">
-                    {fmtCurrency(p.price, currency)}
-                  </span>
-                  <button
-                    className="btn btn-primary btn-small"
-                    onClick={() => add(p)}
-                  >
-                    Ajouter
-                  </button>
-                </div>
-              </article>
+                {/* IMAGE DU PRODUIT */}
+                {p.imageUrl ? (
+                  <div className="product-image-wrapper">
+                    <img
+                      src={p.imageUrl}
+                      alt={p.name}
+                      className="product-image"
+                   />
+                 </div>
+               ) : (
+                 <div className="product-image-placeholder">
+                   Image
+                 </div>
+               )}
+
+               <h3 className="product-title">{p.name}</h3>
+               <p className="product-sub">
+                 {p.category || "–"} · Stock: {p.stock}
+               </p>
+
+               <div className="product-bottom">
+                 <span className="product-price">
+                   {fmtCurrency(p.price, currency)}
+                 </span>
+                 <button
+                   className="btn btn-primary btn-small"
+                   onClick={() => add(p)}
+                 >
+                   Ajouter
+                 </button>
+               </div>
+             </article>
             ))}
             {filtered.length === 0 && (
               <div className="info-text">
