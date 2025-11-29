@@ -214,7 +214,7 @@ export default function App() {
     const { data, error } = await supabase
       .from("maboutique")
       .insert(row)
-      .select("id, nom, prix, stock, categorie")
+      .select("id, nom, prix, stock, categorie, image_url")
       .single();
 
     if (error) throw error;
