@@ -34,6 +34,7 @@ function productToRow(product) {
     prix: Number(product.price) || 0,
     stock: Number(product.stock) || 0,
     categorie: product.category || "",
+    image_url: product.imageUrl ?? null,
   };
 }
 
@@ -591,6 +592,13 @@ export default function App() {
             setRoute={setRoute}
             hidden={!isAdmin()}
           />
+          <NavButton
+            id="external"
+            label="Commandes Clients"
+            icon="🛒"
+            route={route}
+            setRoute={setRoute}
+          />
         </aside>
 
         {/* Main */}
@@ -636,6 +644,9 @@ export default function App() {
               onDeleteSaleAndPayment={handleDeleteSaleAndPayment} // si tu as cette fonction
            />
          )}
+          {route === "external" && (
+            <ExternalOrdersPage sales={sales} currency={currency} />
+          )}
 
           {route === "reports" && (
             <ReportsPage sales={sales} currency={currency} />
@@ -1685,6 +1696,147 @@ function PaymentsPage({
                   Supprimer la vente
                 </button>
               )}
+            </div>
+          </div>
+        )}
+      </Modal>
+    </section>
+  );
+}
+
+// =============================================================
+//  Commandes Clients (Encens Client)
+//  — Style identique à la page Paiements
+// =============================================================
+function ExternalOrdersPage({ sales, currency }) {
+  const [open, setOpen] = useState(false);
+  const [current, setCurrent] = useState(null);
+
+  // SEULEMENT commandes venant de Encens Client
+  const external = useMemo(
+    () => sales.filter((s) => s.method === "ENCENS_CLIENT"),
+    [sales]
+  );
+
+  return (
+    <section className="page">
+      <h1 className="page-title">Commandes Clients</h1>
+
+      <div className="card">
+        <div className="toolbar">
+          <div className="toolbar-label">
+            Commandes reçues ({external.length})
+          </div>
+        </div>
+
+        {/* Tableau */}
+        <table className="table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Client</th>
+              <th>Téléphone</th>
+              <th>Total</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {external.map((s) => (
+              <tr key={s.id}>
+                <td>{new Date(s.date).toLocaleString()}</td>
+                <td>{s.customer?.name || "—"}</td>
+                <td>{s.customer?.phone || "—"}</td>
+                <td>{fmtCurrency(s.total, currency)}</td>
+                <td>
+                  <button
+                    className="btn-icon"
+                    onClick={() => {
+                      setCurrent(s);
+                      setOpen(true);
+                    }}
+                  >
+                    👁
+                  </button>
+                </td>
+              </tr>
+            ))}
+
+            {external.length === 0 && (
+              <tr>
+                <td colSpan={5} className="table-empty">
+                  Aucune commande client pour le moment.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Modal détails */}
+      <Modal
+        open={open}
+        title={current ? `Commande Client` : "Commande"}
+        onClose={() => setOpen(false)}
+      >
+        {current && (
+          <div className="modal-body">
+            <div className="modal-info">
+              <div>
+                Date :{" "}
+                <strong>
+                  {new Date(current.date).toLocaleString()}
+                </strong>
+              </div>
+              <div>
+                Client :{" "}
+                <strong>{current.customer?.name || "—"}</strong>
+              </div>
+              <div>
+                Téléphone :{" "}
+                <strong>{current.customer?.phone || "—"}</strong>
+              </div>
+              <div>
+                Adresse :{" "}
+                <strong>{current.customer?.address || "—"}</strong>
+              </div>
+              <div>
+                Total :{" "}
+                <strong>{fmtCurrency(current.total, currency)}</strong>
+              </div>
+            </div>
+
+            {/* ARTICLES */}
+            {current.items?.length > 0 && (
+              <>
+                <h3 className="modal-subtitle" style={{ marginTop: 12 }}>
+                  Articles
+                </h3>
+                <table className="table table-compact">
+                  <thead>
+                    <tr>
+                      <th>Produit</th>
+                      <th>Qté</th>
+                      <th>Prix</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {current.items.map((it, idx) => (
+                      <tr key={idx}>
+                        <td>{it.name}</td>
+                        <td>{it.qty}</td>
+                        <td>{fmtCurrency(it.price, currency)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </>
+            )}
+
+            <div className="modal-actions">
+              <button className="btn" onClick={() => setOpen(false)}>
+                Fermer
+              </button>
             </div>
           </div>
         )}
