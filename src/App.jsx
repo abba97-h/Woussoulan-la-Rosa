@@ -47,6 +47,7 @@ function rowToSale(row) {
     method: row.method || "Cash",
     ref: row.ref || "",
     date: row.date,
+    status: row.status || "pending",
     customer: {
       name: row.customer_name || "",
       phone: row.customer_phone || "",
@@ -63,6 +64,7 @@ function saleToRow(sale) {
     ref: sale.ref,
     total: sale.total,
     items: sale.items,
+    status: sale.status || "pending",
     customer_name: sale.customer?.name || "",
     customer_phone: sale.customer?.phone || "",
     customer_address: sale.customer?.address || "",
@@ -333,6 +335,7 @@ export default function App() {
       method: payMethod,
       ref: ref.trim(),
       date: now,
+      status: "paid",
       customer: {
         name: custName.trim(),
         phone: custPhone.trim(),
@@ -474,6 +477,34 @@ export default function App() {
       alert("Erreur lors de la suppression. Restauration locale.");
       setPayments(backupPayments);
       setSales(backupSales);
+      setCloudStatus({ connected: false, last: "Offline" });
+    }
+  }
+
+    // ---------- Mise à jour du statut d'une vente ----------
+  async function handleUpdateSaleStatus(saleId, newStatus) {
+    if (!saleId) return;
+
+    const prevSales = sales;
+    // Optimiste côté UI
+    setSales((old) =>
+      old.map((s) =>
+        s.id === saleId ? { ...s, status: newStatus } : s
+      )
+    );
+
+    try {
+      const { error } = await supabase
+        .from("sales")
+        .update({ status: newStatus })
+        .eq("id", saleId);
+
+      if (error) throw error;
+      setCloudStatus({ connected: true, last: "Connected" });
+    } catch (err) {
+      console.error("Erreur mise à jour statut vente :", err);
+      alert("Erreur Supabase, restauration de l'ancien statut.");
+      setSales(prevSales);
       setCloudStatus({ connected: false, last: "Offline" });
     }
   }
@@ -644,9 +675,14 @@ export default function App() {
               onDeleteSaleAndPayment={handleDeleteSaleAndPayment} // si tu as cette fonction
            />
          )}
+
           {route === "external" && (
-            <ExternalOrdersPage sales={sales} currency={currency} />
-          )}
+            <ExternalOrdersPage
+              sales={sales}
+              currency={currency}
+              onChangeStatus={handleUpdateSaleStatus}   // 👈 très important
+           />
+         )}
 
           {route === "reports" && (
             <ReportsPage sales={sales} currency={currency} />
@@ -1705,18 +1741,22 @@ function PaymentsPage({
 }
 
 // =============================================================
-//  Commandes Clients (Encens Client)
-//  — Style identique à la page Paiements
+//  Commandes Clients (Encens Client) avec statut
 // =============================================================
-function ExternalOrdersPage({ sales, currency }) {
+function ExternalOrdersPage({ sales, currency, onChangeStatus }) {
   const [open, setOpen] = useState(false);
   const [current, setCurrent] = useState(null);
 
-  // SEULEMENT commandes venant de Encens Client
+  // SEULEMENT commandes venant d'Encens Client
   const external = useMemo(
     () => sales.filter((s) => s.method === "ENCENS_CLIENT"),
     [sales]
   );
+
+  function handleStatusChange(saleId, newStatus) {
+    if (!onChangeStatus) return;
+    onChangeStatus(saleId, newStatus);
+  }
 
   return (
     <section className="page">
@@ -1729,7 +1769,6 @@ function ExternalOrdersPage({ sales, currency }) {
           </div>
         </div>
 
-        {/* Tableau */}
         <table className="table">
           <thead>
             <tr>
@@ -1737,10 +1776,10 @@ function ExternalOrdersPage({ sales, currency }) {
               <th>Client</th>
               <th>Téléphone</th>
               <th>Total</th>
+              <th>Statut</th>
               <th>Actions</th>
             </tr>
           </thead>
-
           <tbody>
             {external.map((s) => (
               <tr key={s.id}>
@@ -1748,6 +1787,21 @@ function ExternalOrdersPage({ sales, currency }) {
                 <td>{s.customer?.name || "—"}</td>
                 <td>{s.customer?.phone || "—"}</td>
                 <td>{fmtCurrency(s.total, currency)}</td>
+                <td>
+                  <select
+                    className="select select-small"
+                    value={s.status || "pending"}
+                    onChange={(e) =>
+                      handleStatusChange(s.id, e.target.value)
+                    }
+                  >
+                    {ORDER_STATUSES.map((st) => (
+                      <option key={st} value={st}>
+                        {st}
+                      </option>
+                    ))}
+                  </select>
+                </td>
                 <td>
                   <button
                     className="btn-icon"
@@ -1764,7 +1818,7 @@ function ExternalOrdersPage({ sales, currency }) {
 
             {external.length === 0 && (
               <tr>
-                <td colSpan={5} className="table-empty">
+                <td colSpan={6} className="table-empty">
                   Aucune commande client pour le moment.
                 </td>
               </tr>
@@ -1773,10 +1827,9 @@ function ExternalOrdersPage({ sales, currency }) {
         </table>
       </div>
 
-      {/* Modal détails */}
       <Modal
         open={open}
-        title={current ? `Commande Client` : "Commande"}
+        title={current ? "Commande Client" : "Commande"}
         onClose={() => setOpen(false)}
       >
         {current && (
@@ -1787,6 +1840,10 @@ function ExternalOrdersPage({ sales, currency }) {
                 <strong>
                   {new Date(current.date).toLocaleString()}
                 </strong>
+              </div>
+              <div>
+                Statut :{" "}
+                <strong>{current.status || "pending"}</strong>
               </div>
               <div>
                 Client :{" "}
@@ -1806,8 +1863,7 @@ function ExternalOrdersPage({ sales, currency }) {
               </div>
             </div>
 
-            {/* ARTICLES */}
-            {current.items?.length > 0 && (
+            {Array.isArray(current.items) && current.items.length > 0 && (
               <>
                 <h3 className="modal-subtitle" style={{ marginTop: 12 }}>
                   Articles
@@ -1850,6 +1906,7 @@ function ExternalOrdersPage({ sales, currency }) {
 // =============================================================
 function ReportsPage({ sales, currency }) {
   const [selectedDate, setSelectedDate] = useState("");
+  const [originFilter, setOriginFilter] = useState("Tous"); // 👈 NOUVEAU
 
   const uniqueDates = Array.from(
     new Set(sales.map((s) => (s.date || "").slice(0, 10)))
@@ -1858,7 +1915,17 @@ function ReportsPage({ sales, currency }) {
   const dateToShow =
     selectedDate || (uniqueDates.length ? uniqueDates[0] : "");
 
-  const dailySales = sales.filter((s) =>
+  // Filtre origine (POS vs Encens Client)
+  const filteredByOrigin = sales.filter((s) => {
+    if (originFilter === "Tous") return true;
+    if (originFilter === "Encens Client")
+      return s.method === "ENCENS_CLIENT";
+    if (originFilter === "POS interne")
+      return s.method !== "ENCENS_CLIENT";
+    return true;
+  });
+
+  const dailySales = filteredByOrigin.filter((s) =>
     (s.date || "").startsWith(dateToShow)
   );
   const total = dailySales.reduce((sum, s) => sum + (s.total || 0), 0);
@@ -1881,7 +1948,18 @@ function ReportsPage({ sales, currency }) {
               </option>
             ))}
           </select>
-          <div className="kpi-value">
+
+          <select
+            className="select"
+            value={originFilter}
+            onChange={(e) => setOriginFilter(e.target.value)}
+          >
+            <option value="Tous">Toutes les ventes</option>
+            <option value="POS interne">POS interne</option>
+            <option value="Encens Client">Encens Client</option>
+          </select>
+
+          <div className="kpi-value grid-span-2">
             {fmtCurrency(total, currency)}
           </div>
         </div>
@@ -1890,8 +1968,10 @@ function ReportsPage({ sales, currency }) {
           <thead>
             <tr>
               <th>Heure</th>
+              <th>Origine</th>
               <th>Méthode</th>
               <th>Réf.</th>
+              <th>Statut</th>
               <th>Total</th>
             </tr>
           </thead>
@@ -1904,15 +1984,21 @@ function ReportsPage({ sales, currency }) {
                     minute: "2-digit",
                   })}
                 </td>
+                <td>
+                  {s.method === "ENCENS_CLIENT"
+                    ? "Encens Client"
+                    : "POS interne"}
+                </td>
                 <td>{s.method}</td>
                 <td>{s.ref}</td>
+                <td>{s.status || "pending"}</td>
                 <td>{fmtCurrency(s.total, currency)}</td>
               </tr>
             ))}
             {dailySales.length === 0 && (
               <tr>
-                <td colSpan={4} className="table-empty">
-                  Aucune vente pour cette date.
+                <td colSpan={6} className="table-empty">
+                  Aucune vente pour cette date / ce filtre.
                 </td>
               </tr>
             )}
@@ -2182,8 +2268,11 @@ const EMPTY_PRODUCT = {
   minStock: 0,
 };
 
-const PAY_METHODS = ["Cash", "Orange Money", "Ria", "MoneyGram", "Carte"];
-const CURRENCIES = ["EUR", "USD", "XOF"];
+const PAY_METHODS = ["Cash", "Orange Money", "Wave", "Carte"];
+const CURRENCIES = ["XOF"];
+
+// 🔥 Statuts possibles des commandes
+const ORDER_STATUSES = ["pending", "payé", "livré",];
 
 const DEFAULT_USERS = [
   {
