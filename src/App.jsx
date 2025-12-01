@@ -565,15 +565,22 @@ export default function App() {
           />
           <NavButton
             id="pos"
-            label="Ventes (POS)"
+            label="Ventes"
             icon="🧾"
             route={route}
             setRoute={setRoute}
           />
           <NavButton
             id="payments"
-            label="Paiements"
+            label="commande boutique"
             icon="💳"
+            route={route}
+            setRoute={setRoute}
+          />
+          <NavButton
+            id="external"
+            label="Commandes extérieur"
+            icon="🛒"
             route={route}
             setRoute={setRoute}
           />
@@ -586,18 +593,11 @@ export default function App() {
           />
           <NavButton
             id="settings"
-            label="Réglages"
+            label="Paramètres"
             icon="⚙️"
             route={route}
             setRoute={setRoute}
             hidden={!isAdmin()}
-          />
-          <NavButton
-            id="external"
-            label="Commandes Clients"
-            icon="🛒"
-            route={route}
-            setRoute={setRoute}
           />
         </aside>
 
