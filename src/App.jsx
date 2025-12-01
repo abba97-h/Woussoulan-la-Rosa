@@ -1035,7 +1035,7 @@ function StockPage({
           Réinitialiser
         </button>
         <button className="btn" onClick={() => setOpenQuickAdd(true)}>
-          + Nouveau produit (sans stock)
+          + Nouveau produit
         </button>
       </div>
 
