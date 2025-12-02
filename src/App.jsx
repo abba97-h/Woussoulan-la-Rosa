@@ -44,10 +44,14 @@ function rowToSale(row) {
     id: row.id,
     items: Array.isArray(row.items) ? row.items : [],
     total: Number(row.total) || 0,
-    method: row.method || "Cash",
+    method: row.method || "Cash",              // ce qui vient de Supabase
     ref: row.ref || "",
     date: row.date,
     status: row.status || "pending",
+    // 👇 on récupère la vraie méthode de paiement du client si elle existe,
+    // sinon on retombe sur row.method
+    clientPaymentMethod:
+      row.client_payment_method || row.client_payment || row.method || null,
     customer: {
       name: row.customer_name || "",
       phone: row.customer_phone || "",
@@ -55,6 +59,7 @@ function rowToSale(row) {
     },
   };
 }
+
 
 function saleToRow(sale) {
   return {
@@ -65,6 +70,7 @@ function saleToRow(sale) {
     total: sale.total,
     items: sale.items,
     status: sale.status || "pending",
+    client_payment_method: sale.clientPaymentMethod || null,
     customer_name: sale.customer?.name || "",
     customer_phone: sale.customer?.phone || "",
     customer_address: sale.customer?.address || "",
@@ -1845,6 +1851,12 @@ function ExternalOrdersPage({ sales, currency, onChangeStatus }) {
                 Statut :{" "}
                 <strong>{current.status || "pending"}</strong>
               </div>
+              {current.clientPaymentMethod && (
+                <div>
+                  Méthode de paiement :{" "}
+                  <strong>{current.clientPaymentMethod}</strong>
+                </div>
+              )}
               <div>
                 Client :{" "}
                 <strong>{current.customer?.name || "—"}</strong>
