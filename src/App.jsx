@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "./lib/supabase";
 import "./index.css";
 import ErrorPage from "./Error";
+import logoWoussoulan from "./assets/logo-woussoulan.png";
 
 // =============================================================
 //  Encens Manager — version Supabase complète
@@ -708,8 +709,7 @@ export default function App() {
 
       <footer className="app-footer">
         <p>
-          💡 Accès privé protégé — rôles: Administrateur & Personnel. Pensez à
-          changer le mot de passe par défaut.
+          💡 Accès privé protégé — rôles: Administrateur & Personnel.
         </p>
       </footer>
     </div>
@@ -2298,7 +2298,7 @@ const PAY_METHODS = ["Cash", "Orange Money", "Wave", "Carte"];
 const CURRENCIES = ["XOF"];
 
 // 🔥 Statuts possibles des commandes
-const ORDER_STATUSES = ["pending", "payé", "livré",];
+const ORDER_STATUSES = ["En attente", "payé", "livré",];
 
 const DEFAULT_USERS = [
   {
@@ -2361,11 +2361,16 @@ function isoDaysAgo(i) {
 function Logo() {
   return (
     <div className="logo">
-      <div className="logo-icon" />
+      <img
+        src={logoWoussoulan}
+        alt="Woussoulan La Rosa"
+        className="logo-image"
+      />
       <span className="logo-text">Encens Manager</span>
     </div>
   );
 }
+
 
 function NavButton({ id, label, icon, route, setRoute, hidden }) {
   if (hidden) return null;

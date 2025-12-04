@@ -94,27 +94,39 @@ body {
   gap: 0.5rem;
 }
 
-/* Navigation */
 .nav-button {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.5rem 0.75rem;
-  border-radius: 0.75rem;
-  border: 1px solid #e5e7eb;
-  background: #ffffff;
-  text-align: left;
-  font-size: 0.9rem;
+  width: 100%;
+  padding: 0.65rem 0.9rem;
+  border-radius: 999px;
+  border: none;
+  background: transparent;
+  color: #111827;             /* texte sombre par défaut */
+  font-size: 0.95rem;
   cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.05s ease;
+}
+
+/* les spans (icône + texte) prennent la couleur du bouton */
+.nav-button span {
+  color: inherit;
 }
 
 .nav-button:hover {
-  background: #f3f4f6;
+  background: #e5e7eb;
 }
 
+/* bouton actif = fond noir + texte blanc */
 .nav-button--active {
   background: #111827;
-  color: #ffffff;
+  color: #f9fafb;             /* 👉 texte + icône en blanc */
+  font-weight: 600;
+}
+
+.nav-button--active span {
+  color: inherit;             /* s’assure que les spans restent blancs */
 }
 
 /* Logo */
@@ -821,13 +833,12 @@ a:active {
 
 /* Les boutons de navigation (Stock, Ventes, etc.) */
 button,
-.nav-button,
 .nav-link {
   color: #111827;
 }
-.sidebar button,
+.sidebar button:not(.nav-button--active),
+.menu button:not(.nav-button--active),
 .sidebar a,
-.menu button,
 .menu a {
   color: #111827;
 }
@@ -880,4 +891,17 @@ body {
   justify-content: center;
   color: #9ca3af;
   font-size: 0.85rem;
+}
+
+.logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.logo-image {
+  width: 32px;
+  height: 32px;
+  border-radius: 9999px; /* petit effet icône rond */
+  object-fit: cover;
 }
