@@ -2366,7 +2366,7 @@ function Logo() {
         alt="Woussoulan La Rosa"
         className="logo-image"
       />
-      <span className="logo-text">Encens Manager</span>
+      <span className="logo-text">Soumadoumaba La Rosa</span>
     </div>
   );
 }
