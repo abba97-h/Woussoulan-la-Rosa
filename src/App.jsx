@@ -686,9 +686,10 @@ export default function App() {
             <ExternalOrdersPage
               sales={sales}
               currency={currency}
-              onChangeStatus={handleUpdateSaleStatus}   // 👈 très important
+              onChangeStatus={handleUpdateSaleStatus}
+              onDeleteSale={handleDeleteSaleAndPayment}   // 👈 on passe la fonction de suppression
            />
-         )}
+          )}
 
           {route === "reports" && (
             <ReportsPage sales={sales} currency={currency} />
@@ -1749,7 +1750,7 @@ function PaymentsPage({
 // =============================================================
 //  Commandes Clients (Encens Client) avec statut
 // =============================================================
-function ExternalOrdersPage({ sales, currency, onChangeStatus }) {
+function ExternalOrdersPage({ sales, currency, onChangeStatus, onDeleteSale }) {
   const [open, setOpen] = useState(false);
   const [current, setCurrent] = useState(null);
 
@@ -1905,6 +1906,19 @@ function ExternalOrdersPage({ sales, currency, onChangeStatus }) {
               <button className="btn" onClick={() => setOpen(false)}>
                 Fermer
               </button>
+
+              {onDeleteSale && (
+                <button
+                  className="btn btn-primary"
+                  onClick={() => {
+                    if (!window.confirm("Supprimer cette commande client ?")) return;
+                    onDeleteSale(current.id);   // 👈 supprime la vente + paiements liés
+                    setOpen(false);
+                  }}
+                >
+                  Supprimer la commande
+                </button>
+              )}
             </div>
           </div>
         )}
