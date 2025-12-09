@@ -26,6 +26,7 @@ function rowToProduct(row) {
     stock: Number(row.stock) || 0,
     minStock: 0,
     imageUrl: typeof row.image_url === "string" ? row.image_url : null,
+    isActive: row.is_active ?? true,
   };
 }
 
@@ -36,6 +37,7 @@ function productToRow(product) {
     stock: Number(product.stock) || 0,
     categorie: product.category || "",
     image_url: product.imageUrl ?? null,
+    is_active: product.isActive ?? true,
   };
 }
 
@@ -148,7 +150,7 @@ export default function App() {
         const [prodRes, salesRes, payRes] = await Promise.all([
           supabase
             .from("maboutique")
-            .select("id, nom, prix, stock, categorie, image_url")
+            .select("id, nom, prix, stock, categorie, image_url, is_active")
             .order("id", { ascending: true }),
           supabase.from("sales").select("*").order("date", {
             ascending: false,
@@ -224,7 +226,7 @@ export default function App() {
     const { data, error } = await supabase
       .from("maboutique")
       .insert(row)
-      .select("id, nom, prix, stock, categorie, image_url")
+      .select("id, nom, prix, stock, categorie, image_url, is_active")
       .single();
 
     if (error) throw error;
@@ -238,7 +240,7 @@ export default function App() {
       .from("maboutique")
       .update(row)
       .eq("id", product.id)
-      .select("id, nom, prix, stock, categorie, image_url")
+      .select("id, nom, prix, stock, categorie, image_url, is_active")
       .single();
     if (error) throw error;
   }
@@ -1079,6 +1081,22 @@ function StockPage({
                 <td className="text-right">{p.stock}</td>
                 <td className="text-right">
                   <div className="table-actions">
+                    {/* 🔁 ON/OFF app client */}
+                    <button
+                      type="button"
+                      className={`toggle-switch ${
+                        p.isActive ? "toggle-switch--on" : "toggle-switch--off"
+                      }`}
+                      onClick={() => onUpdate({ ...p, isActive: !p.isActive })}
+                      title={p.isActive ? "Désactiver dans l'app client" : "Activer dans l'app client"}
+                    >
+                      <span className="toggle-switch__circle" />
+                    </button>
+
+                    {/* petite séparation visuelle (optionnel) */}
+                    <span className="table-actions-separator" />
+
+                    {/* boutons stock + voir */}
                     <button
                       className="btn btn-small"
                       onClick={() => onAdjustStock(p.id, +1)}

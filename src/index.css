@@ -905,3 +905,61 @@ body {
   border-radius: 9999px; /* petit effet icône rond */
   object-fit: cover;
 }
+
+/* ========= Toggle ON/OFF pour App client ========= */
+
+.toggle-switch {
+  position: relative;
+  width: 46px;
+  height: 24px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.6);
+  background: #111827;
+  padding: 2px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  transition: background 0.18s ease, border-color 0.18s ease;
+}
+
+.toggle-switch__circle {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: #e5e7eb;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.7);
+  transform: translateX(0);
+  transition: transform 0.18s ease;
+}
+
+/* état ON */
+.toggle-switch--on {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  border-color: rgba(34, 197, 94, 0.9);
+}
+
+.toggle-switch--on .toggle-switch__circle {
+  transform: translateX(20px);
+}
+
+/* état OFF */
+.toggle-switch--off {
+  background: #111827;
+  border-color: rgba(148, 163, 184, 0.6);
+}
+
+.toggle-switch--off .toggle-switch__circle {
+  transform: translateX(0);
+}
+
+.table-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.table-actions-separator {
+  width: 1px;
+  height: 18px;
+  background: rgba(148, 163, 184, 0.5);
+}
