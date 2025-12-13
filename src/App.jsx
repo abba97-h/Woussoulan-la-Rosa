@@ -413,40 +413,80 @@ export default function App() {
     }
   }
 
-    // ---------- Suppression vente + paiements liés ----------
+    // ---------- Suppression vente + paiements liés + RESTAURATION DU STOCK ----------
   async function handleDeleteSaleAndPayment(saleId) {
     if (!saleId) return;
 
-    // sauvegarde locale en cas d'erreur Supabase
+    // 0) On récupère la vente ciblée
+    const targetSale = sales.find((s) => s.id === saleId);
+
+    // Sauvegardes locales en cas d'erreur Supabase
     const prevSales = sales;
     const prevPayments = payments;
+    const prevProducts = products;
 
-    // 1) On enlève tout de suite côté React
+    // 1) On prépare un tableau d'items (ou [] si rien)
+    const items = Array.isArray(targetSale?.items) ? targetSale.items : [];
+
+    // 2) On restaure le stock côté React si la vente a des articles
+    let restoredProducts = products;
+    if (items.length > 0) {
+      restoredProducts = products.map((p) => {
+        const it = items.find((i) => i.productId === p.id);
+        if (!it) return p;
+
+        const qty = Number(it.qty) || 0;
+        return {
+          ...p,
+          stock: (Number(p.stock) || 0) + qty, // ✅ on remet le stock
+        };
+      });
+
+      setProducts(restoredProducts);
+    }
+
+    // 3) On enlève tout de suite la vente + paiements côté UI (optimiste)
     setSales((old) => old.filter((s) => s.id !== saleId));
     setPayments((old) => old.filter((p) => p.saleId !== saleId));
 
     try {
+      // 4) Supprimer les paiements liés dans Supabase
       const { error: payErr } = await supabase
         .from("payments")
         .delete()
         .eq("sale_id", saleId);
-
       if (payErr) throw payErr;
 
+      // 5) Supprimer la vente dans Supabase
       const { error: saleErr } = await supabase
         .from("sales")
         .delete()
         .eq("id", saleId);
-
       if (saleErr) throw saleErr;
+
+      // 6) Mettre à jour le stock dans maboutique uniquement pour les produits touchés
+      if (items.length > 0) {
+        const impactedProducts = restoredProducts.filter((p) =>
+          items.some((i) => i.productId === p.id)
+        );
+
+        for (const p of impactedProducts) {
+          await updateProductOnCloud(p); // 👈 ta fonction déjà définie plus haut
+        }
+      }
 
       setCloudStatus({ connected: true, last: "Connected" });
     } catch (err) {
-      console.error("Erreur suppression vente/paiements :", err);
+      console.error(
+        "Erreur suppression vente/paiements + restauration stock :",
+        err
+      );
       alert("Erreur Supabase, restauration des données locales.");
-      // restauration si erreur
+
+      // 7) On remet tout comme avant si ça a raté côté Supabase
       setSales(prevSales);
       setPayments(prevPayments);
+      setProducts(prevProducts);
       setCloudStatus({ connected: false, last: "Offline" });
     }
   }
