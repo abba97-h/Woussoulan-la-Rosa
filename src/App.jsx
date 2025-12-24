@@ -20,7 +20,7 @@ function rowToProduct(row) {
   return {
     id: row.id,
     name: row.nom,
-    sku: "",
+    sku: row.sku,
     category: row.categorie,
     price: Number(row.prix) || 0,
     stock: Number(row.stock) || 0,
@@ -33,6 +33,7 @@ function rowToProduct(row) {
 function productToRow(product) {
   return {
     nom: product.name,
+    sku:product.sku,
     prix: Number(product.price) || 0,
     stock: Number(product.stock) || 0,
     categorie: product.category || "",
@@ -150,7 +151,7 @@ export default function App() {
         const [prodRes, salesRes, payRes] = await Promise.all([
           supabase
             .from("maboutique")
-            .select("id, nom, prix, stock, categorie, image_url, is_active")
+            .select("id, nom, sku, prix, stock, categorie, image_url, is_active")
             .order("id", { ascending: true }),
           supabase.from("sales").select("*").order("date", {
             ascending: false,

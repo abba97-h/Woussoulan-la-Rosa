@@ -3,6 +3,9 @@
         "strict": false
     },
     "exclude": [
-        "supabase/functions"
+        "node_modules",
+        "dist",
+        "supabase/functions",
+        "supabase/.temp"
     ]
 }

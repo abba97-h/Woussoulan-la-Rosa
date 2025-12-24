@@ -24,7 +24,7 @@ serve(async (req) => {
     // ADMIN KEY (OBLIGATOIRE)
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+      Deno.env.get("SERVICE_ROLE_KEY")!
     );
 
     // 1) Create user in Supabase Auth
