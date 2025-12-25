@@ -128,7 +128,7 @@ export default function App() {
   const [paymentsLoading, setPaymentsLoading] = useState(true);
   const [paymentsError, setPaymentsError] = useState(null);
 
-  const [currency, setCurrency] = useLocalStorage("em_currency", "EUR");
+  const [currency, setCurrency] = useLocalStorage("em_currency", "XOF");
   const [cloudStatus, setCloudStatus] = useState({
     connected: false,
     last: "Offline",
