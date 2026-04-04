@@ -117,6 +117,7 @@ export default function App() {
   const [route, setRoute] = useState("dashboard");
 
   const [products, setProducts] = useState([]);
+  const [imageFile, setImageFile] = useState(null);
   const [productsLoading, setProductsLoading] = useState(true);
   const [productsError, setProductsError] = useState(null);
 
@@ -135,6 +136,29 @@ export default function App() {
   });
 
   // ---------- Chargement initial (produits + ventes + paiements) ----------
+  async function uploadImage(file) {
+    if (!file) return null;
+
+    const fileName = `${Date.now()}-${file.name}`;
+
+    const filePath = `products/${fileName}`; // 🔥 organisation propre
+
+    const { error } = await supabase.storage
+      .from("boutique") // ⚠️ ton vrai bucket
+      .upload(filePath, file);
+
+    if (error) {
+      console.error("Erreur upload:", error);
+      return null;
+    }
+
+    const { data } = supabase.storage
+      .from("boutique")
+      .getPublicUrl(filePath);
+
+    return data.publicUrl; // ✅ URL publique
+  }
+
   useEffect(() => {
     let cancelled = false;
 
@@ -219,15 +243,17 @@ export default function App() {
   async function createProductOnCloud(draft) {
     const row = productToRow({
       name: draft.name,
+      sku: draft.sku,
       price: draft.price,
       stock: draft.stock,
       category: draft.category,
+      imageUrl: draft.imageUrl, // 🔥 AJOUT
     });
 
     const { data, error } = await supabase
       .from("maboutique")
       .insert(row)
-      .select("id, nom, prix, stock, categorie, image_url, is_active")
+      .select("id, nom, sku, prix, stock, categorie, image_url, is_active")
       .single();
 
     if (error) throw error;
@@ -257,28 +283,64 @@ export default function App() {
 
   async function handleCreateProduct(draft) {
     try {
-      const created = await createProductOnCloud(draft);
+      let imageUrl = null;
+
+      if (imageFile) {
+        imageUrl = await uploadImage(imageFile);
+      }
+
+      const created = await createProductOnCloud({
+        ...draft,
+        imageUrl,
+      });
+
       setProducts((prev) => [...prev, created]);
+
+      // ✅ RESET IMAGE ICI 🔥
+      setImageFile(null);
+
       setCloudStatus({ connected: true, last: "Connected" });
+
     } catch (err) {
       console.error("Erreur création produit:", err);
-      alert(
-        "Erreur lors de l'enregistrement du produit dans Supabase. Il sera seulement en mémoire."
-      );
+
       const localOnly = {
         ...draft,
         id: crypto.randomUUID(),
       };
+
       setProducts((prev) => [...prev, localOnly]);
       setCloudStatus({ connected: false, last: "Offline" });
     }
   }
 
   async function handleUpdateProduct(product) {
-    setProducts((prev) => prev.map((p) => (p.id === product.id ? product : p)));
     try {
-      await updateProductOnCloud(product);
+      let imageUrl = product.imageUrl;
+
+      // 🔥 si une nouvelle image est choisie
+      if (imageFile) {
+        imageUrl = await uploadImage(imageFile);
+      }
+
+      const updatedProduct = {
+        ...product,
+        imageUrl,
+      };
+
+      // 🔥 mise à jour locale
+      setProducts((prev) =>
+        prev.map((p) => (p.id === product.id ? updatedProduct : p))
+      );
+
+      // 🔥 mise à jour Supabase
+      await updateProductOnCloud(updatedProduct);
+
       setCloudStatus({ connected: true, last: "Connected" });
+
+      // 🔥 reset image
+      setImageFile(null);
+
     } catch (err) {
       console.error("Erreur mise à jour produit:", err);
       setCloudStatus({ connected: false, last: "Offline" });
@@ -701,6 +763,7 @@ export default function App() {
               error={productsError}
               currency={currency}
               onCreate={handleCreateProduct}
+              setImageFile={setImageFile} // 🔥 AJOUT
               onUpdate={handleUpdateProduct}
               onDelete={handleDeleteProduct}
               onAdjustStock={handleAdjustStock}
@@ -987,6 +1050,7 @@ function StockPage({
   onUpdate,
   onDelete,
   onAdjustStock,
+  setImageFile, // 🔥 AJOUT
 }) {
   const [q, setQ] = useState("");
   const [openEye, setOpenEye] = useState(false);
@@ -1243,6 +1307,11 @@ function StockPage({
               setEditDraft((d) => ({ ...d, category: e.target.value }))
             }
           />
+          <input 
+            type="file"
+            className="input grid-span-2"
+            onChange={(e) => setImageFile(e.target.files[0])}
+          />
           <input
             className="input"
             type="number"
@@ -1302,6 +1371,11 @@ function StockPage({
             name="category"
             className="input"
             placeholder="Catégorie"
+          />
+          <input 
+            type="file"
+            className="input grid-span-2"
+            onChange={(e) => setImageFile(e.target.files[0])}
           />
           <input
             name="price"
