@@ -27,6 +27,8 @@ function rowToProduct(row) {
     minStock: 0,
     imageUrl: typeof row.image_url === "string" ? row.image_url : null,
     isActive: row.is_active ?? true,
+    discountPrice: Number(row.discount_price) || null,
+    hasDiscount: row.has_discount ?? false,
   };
 }
 
@@ -39,6 +41,8 @@ function productToRow(product) {
     categorie: product.category || "",
     image_url: product.imageUrl ?? null,
     is_active: product.isActive ?? true,
+    discount_price: product.discountPrice || null,
+    has_discount: product.hasDiscount ?? false,
   };
 }
 
@@ -175,7 +179,7 @@ export default function App() {
         const [prodRes, salesRes, payRes] = await Promise.all([
           supabase
             .from("maboutique")
-            .select("id, nom, sku, prix, stock, categorie, image_url, is_active")
+            .select("id, nom, sku, prix, stock, categorie, image_url, is_active, discount_price")
             .order("id", { ascending: true }),
           supabase.from("sales").select("*").order("date", {
             ascending: false,
@@ -253,7 +257,7 @@ export default function App() {
     const { data, error } = await supabase
       .from("maboutique")
       .insert(row)
-      .select("id, nom, sku, prix, stock, categorie, image_url, is_active")
+      .select("id, nom, sku, prix, stock, categorie, image_url, is_active, discount_price")
       .single();
 
     if (error) throw error;
@@ -267,7 +271,7 @@ export default function App() {
       .from("maboutique")
       .update(row)
       .eq("id", product.id)
-      .select("id, nom, prix, stock, categorie, image_url, is_active")
+      .select("id, nom, prix, stock, categorie, image_url, is_active, discount_price")
       .single();
     if (error) throw error;
   }
@@ -340,7 +344,6 @@ export default function App() {
 
       // 🔥 reset image
       setImageFile(null);
-
     } catch (err) {
       console.error("Erreur mise à jour produit:", err);
       setCloudStatus({ connected: false, last: "Offline" });
@@ -387,14 +390,18 @@ export default function App() {
     }
 
     const total = cart.reduce(
-      (sum, c) => sum + (Number(c.price) || 0) * (Number(c.qty) || 0),
+      (sum, c) =>
+        sum +
+        (Number(c.discountPrice || c.price) || 0) *
+          (Number(c.qty) || 0),
       0
     );
+
     const items = cart.map((c) => ({
       productId: c.id,
       name: c.name,
       qty: c.qty,
-      price: c.price,
+      price: c.discountPrice || c.price,
     }));
 
     const saleId = crypto.randomUUID();
@@ -767,6 +774,7 @@ export default function App() {
               onUpdate={handleUpdateProduct}
               onDelete={handleDeleteProduct}
               onAdjustStock={handleAdjustStock}
+              isAdmin={isAdmin()}
             />
           )}
 
@@ -1051,6 +1059,7 @@ function StockPage({
   onDelete,
   onAdjustStock,
   setImageFile, // 🔥 AJOUT
+  isAdmin
 }) {
   const [q, setQ] = useState("");
   const [openEye, setOpenEye] = useState(false);
@@ -1082,6 +1091,8 @@ function StockPage({
       price: p.price,
       stock: p.stock,
       minStock: p.minStock || 0,
+      discountPrice: p.discountPrice || "",
+      hasDiscount: p.hasDiscount || false,
     });
     setCurrent(p);
     setOpenEdit(true);
@@ -1102,6 +1113,11 @@ function StockPage({
       price: Number(editDraft.price) || 0,
       stock: Number(editDraft.stock) || 0,
       minStock: Number(editDraft.minStock) || 0,
+      discountPrice: editDraft.hasDiscount
+        ? Number(editDraft.discountPrice)
+        : null,
+
+      hasDiscount: editDraft.hasDiscount || false,
     };
     onUpdate(updated);
     setOpenEdit(false);
@@ -1118,6 +1134,9 @@ function StockPage({
       price: Number(form.get("price") || 0),
       stock: 0,
       minStock: Number(form.get("minStock") || 0),
+      discountPrice: form.get("discountPrice")
+        ? Number(form.get("discountPrice"))
+        : null,
     };
     if (!draft.name || !draft.category) {
       alert("Nom et catégorie requis.");
@@ -1317,8 +1336,32 @@ function StockPage({
             type="number"
             placeholder="Prix"
             value={editDraft.price}
+            disabled={!isAdmin}
             onChange={(e) =>
               setEditDraft((d) => ({ ...d, price: e.target.value }))
+            }
+          />
+          <label>
+            <input
+              type="checkbox"
+              checked={editDraft.hasDiscount || false}
+              onChange={(e) =>
+                setEditDraft((d) => ({
+                  ...d,
+                  hasDiscount: e.target.checked,
+                }))
+              }
+            />
+            Activer réduction
+          </label>
+          <input
+            className="input"
+            type="number"
+            placeholder="Prix réduit (optionnel)"
+            value={editDraft.discountPrice || ""}
+            disabled={!isAdmin && !editDraft.hasDiscount}
+            onChange={(e) =>
+              setEditDraft((d) => ({ ...d, discountPrice: e.target.value }))
             }
           />
           <input
@@ -1326,6 +1369,7 @@ function StockPage({
             type="number"
             placeholder="Stock"
             value={editDraft.stock}
+            disabled={!isAdmin}   // 🔥 AJOUT ICI
             onChange={(e) =>
               setEditDraft((d) => ({ ...d, stock: e.target.value }))
             }
@@ -1385,6 +1429,12 @@ function StockPage({
             placeholder="Prix"
           />
           <input
+            name="discountPrice"
+            type="number"
+            className="input"
+            placeholder="Prix réduit (optionnel)"
+          />
+          <input
             name="minStock"
             type="number"
             className="input"
@@ -1421,18 +1471,35 @@ function POSPage({ products, currency, onCheckout }) {
     );
   }, [products, q]);
 
-  const total = cart.reduce((sum, c) => sum + c.price * c.qty, 0);
+  const total = cart.reduce(
+    (sum, c) => sum + (c.discountPrice || c.price) * c.qty,
+    0
+  );
 
   function add(p) {
+    const finalPrice =
+      p.hasDiscount && p.discountPrice
+        ? p.discountPrice
+        : p.price;
+
     setCart((prev) => {
       const ex = prev.find((x) => x.id === p.id);
+
       if (ex)
         return prev.map((x) =>
           x.id === p.id ? { ...x, qty: x.qty + 1 } : x
         );
+
       return [
         ...prev,
-        { id: p.id, name: p.name, price: p.price, qty: 1 },
+        {
+          id: p.id,
+          name: p.name,
+          price: finalPrice,        // 🔥 PRIX UTILISÉ
+          originalPrice: p.price,   // 🔥 POUR AFFICHER BARRÉ
+          hasDiscount: p.hasDiscount,
+          qty: 1,
+        },
       ];
     });
   }
@@ -1522,7 +1589,19 @@ function POSPage({ products, currency, onCheckout }) {
 
                <div className="product-bottom">
                  <span className="product-price">
-                   {fmtCurrency(p.price, currency)}
+                   {p.hasDiscount && p.discountPrice ? (
+                      <>
+                        <span style={{ textDecoration: "line-through" }}>
+                          {fmtCurrency(p.price, currency)}
+                        </span>
+                        <br />
+                        <span style={{ color: "red" }}>
+                          {fmtCurrency(p.discountPrice, currency)}
+                        </span>
+                      </>
+                    ) : (
+                      fmtCurrency(p.price, currency)
+                    )}
                  </span>
                  <button
                    className="btn btn-primary btn-small"
@@ -1550,7 +1629,19 @@ function POSPage({ products, currency, onCheckout }) {
                     <div className="cart-main">
                       <div className="cart-name">{item.name}</div>
                       <div className="cart-price">
-                        {fmtCurrency(item.price, currency)}
+                        {item.discountPrice ? (
+                          <>
+                            <span style={{ textDecoration: "line-through", color: "gray" }}>
+                              {fmtCurrency(item.price, currency)}
+                            </span>
+                            <br />
+                            <span style={{ color: "green", fontWeight: "bold" }}>
+                              {fmtCurrency(item.discountPrice, currency)}
+                            </span>
+                          </>
+                        ) : (
+                          fmtCurrency(item.price, currency)
+                        )}
                       </div>
                     </div>
                     <div className="cart-controls">
